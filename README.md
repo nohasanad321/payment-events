@@ -117,4 +117,69 @@ This is a technical portfolio demonstration, not a production payment gateway. I
 
 ## Kubernetes
 
-Kubernetes deployment manifests and validation are in progress.
+
+## Kubernetes Deployment
+
+The application has been deployed and tested on a local
+Docker Desktop Kubernetes v1.36.1 cluster.
+
+### Deploy
+
+Build the application image first:
+
+```powershell
+.\mvnw.cmd clean package
+docker compose build payment-events
+```
+
+Create the namespace and deploy Kafka:
+
+```powershell
+kubectl create namespace payment-lab
+kubectl apply -f k8s/kafka.yaml
+kubectl rollout status deployment/kafka -n payment-lab
+```
+
+Deploy the payment service:
+
+```powershell
+kubectl apply -f k8s/payment-events.yaml
+kubectl rollout status deployment/payment-events -n payment-lab
+```
+
+The application manifest uses a locally built Docker image
+with `imagePullPolicy: Never`.
+
+### Verify
+
+```powershell
+kubectl get pods -n payment-lab
+```
+
+Expose the payment API locally:
+
+```powershell
+kubectl port-forward -n payment-lab svc/payment-events 8081:8080
+```
+
+Send a POST request to:
+
+`http://localhost:8081/v1/payments/create`
+
+Verify that the Kafka consumer processed the event:
+
+```powershell
+kubectl logs -n payment-lab deployment/payment-events
+```
+
+### Verified Result
+
+An end-to-end test processed a sample payment of
+250.75 KWD through the Kubernetes deployment.
+
+The REST API response and Kafka consumer log contained
+the same payment identifier, confirming successful
+event delivery and consumption.
+
+This is a single-node local demonstration, not a
+production-ready Kubernetes or Kafka deployment.
